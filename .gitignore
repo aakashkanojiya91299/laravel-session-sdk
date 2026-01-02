@@ -10,6 +10,7 @@ dist/
 # Tests
 coverage/
 *.log
+test/
 
 # IDE
 .idea/
@@ -26,3 +27,10 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# Private/local testing files
+COPY_PASTE_COMMANDS.sh
+QUICK_TEST.sh
+setup.sh
+LOCAL_TESTING_GUIDE.md
+README_TESTING.txt
