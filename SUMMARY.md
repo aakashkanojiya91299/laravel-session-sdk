@@ -59,13 +59,13 @@ npm run build
 npm link
 
 # In your Next.js/Express project
-npm link @yourorg/laravel-session-sdk
+npm link laravel-session-sdk
 ```
 
 ### Step 3: Use in Your Project
 
 ```typescript
-import { LaravelSessionClient } from '@yourorg/laravel-session-sdk';
+import { LaravelSessionClient } from 'laravel-session-sdk';
 
 const client = new LaravelSessionClient({
   database: {
@@ -202,7 +202,7 @@ User logs into Laravel → Next.js validates session → Shows user data
 ```typescript
 // pages/api/auth/user.ts
 import { getLaravelSessionClient } from '@/lib/laravelSession';
-import { validateNextJsSession } from '@yourorg/laravel-session-sdk';
+import { validateNextJsSession } from 'laravel-session-sdk';
 
 export default async function handler(req, res) {
   const client = getLaravelSessionClient();
@@ -219,7 +219,7 @@ export default async function handler(req, res) {
 ### 2. **Express API Server**
 
 ```javascript
-const { LaravelSessionClient, createExpressMiddleware } = require('@yourorg/laravel-session-sdk');
+const { LaravelSessionClient, createExpressMiddleware } = require('laravel-session-sdk');
 
 const client = new LaravelSessionClient({ /* config */ });
 const auth = createExpressMiddleware(client);
@@ -336,7 +336,7 @@ await redis.setex(`session:${sessionId}`, 300, JSON.stringify(result));
 ### Unit Tests (To Be Added)
 
 ```typescript
-import { LaravelSessionClient } from '@yourorg/laravel-session-sdk';
+import { LaravelSessionClient } from 'laravel-session-sdk';
 
 describe('LaravelSessionClient', () => {
   it('should validate valid session', async () => {
@@ -357,13 +357,13 @@ describe('LaravelSessionClient', () => {
 
 1. **Current** (local npm link):
    ```bash
-   npm link @yourorg/laravel-session-sdk
+   npm link laravel-session-sdk
    ```
 
 2. **After publishing**:
    ```bash
-   npm unlink @yourorg/laravel-session-sdk
-   npm install @yourorg/laravel-session-sdk
+   npm unlink laravel-session-sdk
+   npm install laravel-session-sdk
    ```
 
 No code changes needed!
@@ -451,8 +451,8 @@ To contribute to this project:
 
 For issues or questions:
 
-- GitHub Issues: (Add URL after creating repo)
-- Email: your.email@example.com
+- GitHub Issues: https://github.com/aakashkanojiya91299/laravel-session-sdk/issues
+- Email: aakash.wowrooms69@gmail.com
 - Documentation: See README.md
 
 ---

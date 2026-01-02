@@ -2,7 +2,7 @@
 
 > Universal Node.js SDK for validating and managing Laravel sessions in any JavaScript/TypeScript project.
 
-[![npm version](https://badge.fury.io/js/%40yourorg%2Flaravel-session-sdk.svg)](https://www.npmjs.com/package/@yourorg/laravel-session-sdk)
+[![npm version](https://badge.fury.io/js/laravel-session-sdk.svg)](https://www.npmjs.com/package/laravel-session-sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🚀 Features
@@ -20,18 +20,18 @@
 ## 📦 Installation
 
 ```bash
-npm install @yourorg/laravel-session-sdk mysql2
+npm install laravel-session-sdk mysql2
 ```
 
 For Redis support:
 ```bash
-npm install @yourorg/laravel-session-sdk mysql2 redis
+npm install laravel-session-sdk mysql2 redis
 ```
 
 ## 🎯 Quick Start
 
 ```typescript
-import { LaravelSessionClient } from '@yourorg/laravel-session-sdk';
+import { LaravelSessionClient } from 'laravel-session-sdk';
 
 const client = new LaravelSessionClient({
   database: {
@@ -64,7 +64,7 @@ if (result.valid) {
 ```javascript
 const express = require('express');
 const cookieParser = require('cookie-parser');
-const { LaravelSessionClient, createExpressMiddleware } = require('@yourorg/laravel-session-sdk');
+const { LaravelSessionClient, createExpressMiddleware } = require('laravel-session-sdk');
 
 const app = express();
 app.use(cookieParser());
@@ -90,7 +90,7 @@ app.listen(3000);
 
 ```typescript
 import { NextApiRequest, NextApiResponse } from 'next';
-import { LaravelSessionClient, validateNextJsSession } from '@yourorg/laravel-session-sdk';
+import { LaravelSessionClient, validateNextJsSession } from 'laravel-session-sdk';
 
 const client = new LaravelSessionClient({ /* config */ });
 
@@ -186,7 +186,7 @@ export function useLaravelAuth() {
 
 ```typescript
 import { Module } from '@nestjs/common';
-import { LaravelSessionClient, LaravelSessionGuard } from '@yourorg/laravel-session-sdk';
+import { LaravelSessionClient, LaravelSessionGuard } from 'laravel-session-sdk';
 
 const sessionClient = new LaravelSessionClient({ /* config */ });
 
@@ -431,7 +431,7 @@ npm test
 Example test:
 
 ```typescript
-import { LaravelSessionClient } from '@yourorg/laravel-session-sdk';
+import { LaravelSessionClient } from 'laravel-session-sdk';
 
 const client = new LaravelSessionClient({ /* config */ });
 
@@ -447,14 +447,14 @@ Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 📄 License
 
-MIT © [Your Name](https://github.com/yourorg)
+MIT © [Aakash Kanojiya](https://github.com/aakashkanojiya91299)
 
 ## 🔗 Links
 
-- [Documentation](https://github.com/yourorg/laravel-session-sdk#readme)
-- [NPM Package](https://www.npmjs.com/package/@yourorg/laravel-session-sdk)
-- [GitHub Repository](https://github.com/yourorg/laravel-session-sdk)
-- [Report Issues](https://github.com/yourorg/laravel-session-sdk/issues)
+- [Documentation](https://github.com/aakashkanojiya91299/laravel-session-sdk#readme)
+- [NPM Package](https://www.npmjs.com/package/laravel-session-sdk)
+- [GitHub Repository](https://github.com/aakashkanojiya91299/laravel-session-sdk)
+- [Report Issues](https://github.com/aakashkanojiya91299/laravel-session-sdk/issues)
 
 ## 📝 Changelog
 

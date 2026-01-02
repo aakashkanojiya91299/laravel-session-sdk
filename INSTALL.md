@@ -28,13 +28,13 @@ npm link
 
 # In your Next.js/Express project
 cd /path/to/your/nextjs-project
-npm link @yourorg/laravel-session-sdk
+npm link laravel-session-sdk
 ```
 
 ### 4. Use in Your Project
 
 ```typescript
-import { LaravelSessionClient } from '@yourorg/laravel-session-sdk';
+import { LaravelSessionClient } from 'laravel-session-sdk';
 
 const client = new LaravelSessionClient({
   database: {

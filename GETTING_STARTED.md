@@ -31,7 +31,7 @@ This will compile TypeScript to JavaScript in the `dist/` directory.
 npm link
 
 # In your Next.js/Express project
-npm link @yourorg/laravel-session-sdk
+npm link laravel-session-sdk
 ```
 
 📖 **For detailed testing instructions, see [LOCAL_TESTING_GUIDE.md](LOCAL_TESTING_GUIDE.md)**
@@ -54,7 +54,7 @@ NEXT_PUBLIC_LARAVEL_URL=http://localhost:8000
 2. Create `lib/laravelSession.ts`:
 
 ```typescript
-import { LaravelSessionClient } from '@yourorg/laravel-session-sdk';
+import { LaravelSessionClient } from 'laravel-session-sdk';
 
 let client: LaravelSessionClient | null = null;
 
@@ -84,7 +84,7 @@ export function getLaravelSessionClient(): LaravelSessionClient {
 ```typescript
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getLaravelSessionClient } from '@/lib/laravelSession';
-import { validateNextJsSession } from '@yourorg/laravel-session-sdk';
+import { validateNextJsSession } from 'laravel-session-sdk';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const client = getLaravelSessionClient();
@@ -163,7 +163,7 @@ npm publish --access public
 Then install in any project:
 
 ```bash
-npm install @yourorg/laravel-session-sdk mysql2
+npm install laravel-session-sdk mysql2
 ```
 
 ## Troubleshooting

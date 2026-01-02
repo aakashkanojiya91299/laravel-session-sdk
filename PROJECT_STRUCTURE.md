@@ -161,7 +161,7 @@ dist/**/*.js + *.d.ts
     ↓ (npm publish)
 NPM Registry
     ↓ (npm install)
-node_modules/@yourorg/laravel-session-sdk/
+node_modules/laravel-session-sdk/
 ```
 
 ## Development Workflow
