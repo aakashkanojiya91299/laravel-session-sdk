@@ -1,9 +1,27 @@
 {
   "name": "laravel-session-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Universal SDK for validating and managing Laravel sessions in Node.js applications",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./redis": {
+      "types": "./dist/redis.d.ts",
+      "default": "./dist/redis.js"
+    },
+    "./express": {
+      "types": "./dist/express.d.ts",
+      "default": "./dist/express.js"
+    },
+    "./nestjs": {
+      "types": "./dist/nestjs.d.ts",
+      "default": "./dist/nestjs.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -36,18 +54,25 @@
   },
   "homepage": "https://github.com/aakashkanojiya91299/laravel-session-sdk#readme",
   "dependencies": {
-    "express": "^5.2.1",
     "php-serialize": "^4.1.1"
   },
   "peerDependencies": {
     "mysql2": "^3.0.0",
-    "redis": "^4.6.0"
+    "redis": "^4.6.0",
+    "express": "^4.0.0 || ^5.0.0",
+    "@nestjs/common": "^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0"
   },
   "peerDependenciesMeta": {
     "mysql2": {
       "optional": true
     },
     "redis": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    },
+    "@nestjs/common": {
       "optional": true
     }
   },
