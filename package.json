@@ -1,0 +1,78 @@
+{
+  "name": "laravel-session-sdk",
+  "version": "1.0.0",
+  "description": "Universal SDK for validating and managing Laravel sessions in Node.js applications",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "prepublishOnly": "npm run build",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "laravel",
+    "session",
+    "authentication",
+    "nextjs",
+    "express",
+    "nodejs",
+    "nestjs",
+    "php",
+    "session-validation",
+    "session-management"
+  ],
+  "author": "Aakash Kanojiya <aakash.wowrooms69@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aakashkanojiya91299/laravel-session-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aakashkanojiya91299/laravel-session-sdk/issues"
+  },
+  "homepage": "https://github.com/aakashkanojiya91299/laravel-session-sdk#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "php-serialize": "^4.1.1"
+  },
+  "peerDependencies": {
+    "mysql2": "^3.0.0",
+    "redis": "^4.6.0"
+  },
+  "peerDependenciesMeta": {
+    "mysql2": {
+      "optional": true
+    },
+    "redis": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.1.11",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.19.27",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "mysql2": "^3.16.0",
+    "next": "^16.1.1",
+    "prettier": "^3.0.0",
+    "redis": "^5.10.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
+}

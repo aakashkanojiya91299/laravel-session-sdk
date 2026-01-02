@@ -1,0 +1,26 @@
+# Source files
+src/
+tsconfig.json
+.eslintrc.json
+.prettierrc
+
+# Tests
+test/
+*.test.ts
+coverage/
+
+# Examples
+examples/
+
+# Development files
+.git/
+.github/
+.vscode/
+.idea/
+
+# Documentation (keep README.md)
+docs/
+
+# CI/CD
+.travis.yml
+.gitlab-ci.yml

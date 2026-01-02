@@ -1,0 +1,81 @@
+import { createClient, RedisClientType } from 'redis';
+import { StoreInterface } from './StoreInterface';
+import { SessionRecord, LaravelUser, LaravelSessionConfig } from '../types';
+import { DatabaseStore } from './DatabaseStore';
+
+export class RedisStore implements StoreInterface {
+  private client: RedisClientType;
+  private prefix: string;
+  private dbStore: DatabaseStore;
+  private connected: boolean = false;
+
+  constructor(
+    redisConfig: LaravelSessionConfig['redis'],
+    dbConfig: LaravelSessionConfig['database'],
+    prefix = 'laravel_session:'
+  ) {
+    if (!redisConfig) {
+      throw new Error('Redis configuration is required');
+    }
+
+    this.prefix = prefix;
+    this.client = createClient({
+      socket: {
+        host: redisConfig.host,
+        port: redisConfig.port || 6379,
+      },
+      password: redisConfig.password,
+      database: redisConfig.db || 0,
+    });
+
+    // Database store for user/role queries
+    this.dbStore = new DatabaseStore(dbConfig);
+  }
+
+  private async ensureConnected(): Promise<void> {
+    if (!this.connected) {
+      await this.client.connect();
+      this.connected = true;
+    }
+  }
+
+  async getSession(sessionId: string): Promise<SessionRecord | null> {
+    try {
+      await this.ensureConnected();
+
+      const key = `${this.prefix}${sessionId}`;
+      const payload = await this.client.get(key);
+
+      if (!payload) {
+        return null;
+      }
+
+      return {
+        id: sessionId,
+        user_id: null, // Redis doesn't store this separately
+        ip_address: null,
+        user_agent: null,
+        payload: payload,
+        last_activity: Math.floor(Date.now() / 1000),
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to get session from Redis: ${error.message}`);
+    }
+  }
+
+  async getUser(userId: number): Promise<LaravelUser | null> {
+    return this.dbStore.getUser(userId);
+  }
+
+  async getUserRole(userId: number): Promise<string | null> {
+    return this.dbStore.getUserRole(userId);
+  }
+
+  async close(): Promise<void> {
+    if (this.connected) {
+      await this.client.quit();
+      this.connected = false;
+    }
+    await this.dbStore.close();
+  }
+}
