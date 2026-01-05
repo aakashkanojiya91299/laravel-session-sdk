@@ -4,13 +4,15 @@ import * as crypto from 'crypto';
 
 export class SessionDecoder {
   private appKey?: Buffer;
+  private permissionsKey?: string | string[];
 
-  constructor(appKey?: string) {
+  constructor(appKey?: string, permissionsKey?: string | string[]) {
     if (appKey) {
       // Remove 'base64:' prefix if present
       const key = appKey.replace(/^base64:/, '');
       this.appKey = Buffer.from(key, 'base64');
     }
+    this.permissionsKey = permissionsKey;
   }
 
   /**
@@ -18,14 +20,24 @@ export class SessionDecoder {
    */
   decode(payload: string): SessionData | null {
     try {
+      console.log('[SessionDecoder] 🔓 Decoding session payload...');
+      console.log('[SessionDecoder] 📦 Payload length:', payload.length);
+      console.log('[SessionDecoder] 📦 Payload (first 100 chars):', payload.substring(0, 100) + '...');
+      
       // Step 1: Base64 decode
       const decoded = Buffer.from(payload, 'base64').toString('utf-8');
+      console.log('[SessionDecoder] ✅ Base64 decoded, length:', decoded.length);
+      console.log('[SessionDecoder] 📄 Decoded (first 200 chars):', decoded.substring(0, 200) + '...');
 
-      // Step 2: Unserialize PHP format
+      // Step 2: Unserialize PHP format (stdClass support is built-in)
       const unserialized = PhpSerializer.unserialize(decoded);
+      console.log('[SessionDecoder] ✅ PHP unserialized successfully');
+      console.log('[SessionDecoder] 🔑 Session keys:', Object.keys(unserialized));
 
       return unserialized;
     } catch (error: any) {
+      console.error('[SessionDecoder] ❌ Session decode failed:', error.message);
+      console.error('[SessionDecoder] ❌ Full error:', error);
       throw new Error(`Session decode failed: ${error.message}`);
     }
   }
@@ -97,13 +109,20 @@ export class SessionDecoder {
    * Get authenticated user ID from session data
    */
   getUserId(sessionData: SessionData): number | null {
+    console.log('[SessionDecoder] 🔍 Looking for user ID in session...');
+    
     // Find Laravel's auth key (login_web_{hash})
     const authKey = Object.keys(sessionData).find(key => key.startsWith('login_web_'));
 
     if (!authKey) {
+      console.log('[SessionDecoder] ❌ No auth key found (login_web_*)');
+      console.log('[SessionDecoder] 📋 Available keys:', Object.keys(sessionData));
       return null;
     }
 
+    console.log('[SessionDecoder] ✅ Found auth key:', authKey);
+    console.log('[SessionDecoder] 👤 User ID:', sessionData[authKey]);
+    
     return sessionData[authKey];
   }
 
@@ -116,9 +135,104 @@ export class SessionDecoder {
 
   /**
    * Get permissions from session data
+   * Supports single key or multiple keys (array)
    */
   getPermissions(sessionData: SessionData): any {
-    return sessionData.permissions || null;
+    console.log('[SessionDecoder] 🔍 Looking for permissions in session payload...');
+    console.log('[SessionDecoder] 📋 Session keys:', Object.keys(sessionData));
+    
+    // If user specified custom permissions key(s), use them
+    if (this.permissionsKey) {
+      const keys = Array.isArray(this.permissionsKey) ? this.permissionsKey : [this.permissionsKey];
+      console.log(`[SessionDecoder] 🔧 Using custom permissions key(s): ${JSON.stringify(keys)}`);
+      
+      const result: any = {};
+      let foundAny = false;
+      
+      for (const key of keys) {
+        const value = this.getNestedValue(sessionData, key);
+        if (value !== undefined && value !== null) {
+          console.log(`[SessionDecoder] ✅ Found data for key: "${key}"`);
+          result[key] = value;
+          foundAny = true;
+        } else {
+          console.log(`[SessionDecoder] ⚠️  Key "${key}" not found in session`);
+        }
+      }
+      
+      if (foundAny) {
+        // If single key, return the value directly (backward compatible)
+        // If multiple keys, return object with all keys
+        if (keys.length === 1 && result[keys[0]] !== undefined) {
+          console.log('[SessionDecoder] 📄 Permissions data:', JSON.stringify(result[keys[0]], null, 2));
+          return result[keys[0]];
+        } else {
+          console.log('[SessionDecoder] 📄 Multiple permissions data:', JSON.stringify(result, null, 2));
+          return result;
+        }
+      }
+    }
+    
+    // Otherwise, check common Laravel permission storage keys
+    console.log('[SessionDecoder] 🔍 Checking common permission keys...');
+    const permissionKeys = [
+      'permissions',           // Standard key
+      'user_permissions',      // Alternative
+      'auth_permissions',      // Another common pattern
+      'laravel_permissions',   // Laravel-specific
+      'role_permissions',      // Role-based
+      'access_permissions',    // Access control
+    ];
+    
+    // First, try direct permission keys
+    for (const key of permissionKeys) {
+      if (sessionData[key]) {
+        console.log(`[SessionDecoder] ✅ Found permissions in session key: ${key}`);
+        console.log('[SessionDecoder] 📄 Permissions data:', JSON.stringify(sessionData[key], null, 2));
+        return sessionData[key];
+      }
+    }
+    
+    // Check if permissions are stored in user object
+    if (sessionData.user && typeof sessionData.user === 'object') {
+      if (sessionData.user.permissions) {
+        console.log('[SessionDecoder] ✅ Found permissions in user.permissions');
+        console.log('[SessionDecoder] 📄 Permissions data:', JSON.stringify(sessionData.user.permissions, null, 2));
+        return sessionData.user.permissions;
+      }
+    }
+    
+    // Check if there's an auth object with permissions
+    if (sessionData.auth && typeof sessionData.auth === 'object') {
+      if (sessionData.auth.permissions) {
+        console.log('[SessionDecoder] ✅ Found permissions in auth.permissions');
+        console.log('[SessionDecoder] 📄 Permissions data:', JSON.stringify(sessionData.auth.permissions, null, 2));
+        return sessionData.auth.permissions;
+      }
+    }
+    
+    console.log('[SessionDecoder] ⚠️  No permissions found in session payload');
+    console.log('[SessionDecoder] 📋 Full session data for debugging:', JSON.stringify(sessionData, null, 2));
+    return null;
+  }
+
+  /**
+   * Helper method to get nested values using dot notation
+   * Supports keys like 'user.permissions' or 'auth.permissions'
+   */
+  private getNestedValue(obj: any, path: string): any {
+    const keys = path.split('.');
+    let value: any = obj;
+    
+    for (const key of keys) {
+      if (value && typeof value === 'object' && key in value) {
+        value = value[key];
+      } else {
+        return null;
+      }
+    }
+    
+    return value;
   }
 
   /**

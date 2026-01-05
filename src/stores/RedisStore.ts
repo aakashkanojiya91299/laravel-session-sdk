@@ -12,7 +12,10 @@ export class RedisStore implements StoreInterface {
   constructor(
     redisConfig: LaravelSessionConfig['redis'],
     dbConfig: LaravelSessionConfig['database'],
-    prefix = 'laravel_session:'
+    prefix = 'laravel_session:',
+    sessionTable = 'sessions',
+    appKey?: string,
+    permissionsKey?: string | string[]
   ) {
     if (!redisConfig) {
       throw new Error('Redis configuration is required');
@@ -28,8 +31,8 @@ export class RedisStore implements StoreInterface {
       database: redisConfig.db || 0,
     });
 
-    // Database store for user/role queries
-    this.dbStore = new DatabaseStore(dbConfig);
+    // Database store for user/role queries and permissions
+    this.dbStore = new DatabaseStore(dbConfig, sessionTable, appKey, permissionsKey);
   }
 
   private async ensureConnected(): Promise<void> {
@@ -69,6 +72,10 @@ export class RedisStore implements StoreInterface {
 
   async getUserRole(userId: number): Promise<string | null> {
     return this.dbStore.getUserRole(userId);
+  }
+
+  async getUserPermissions(userId: number): Promise<any> {
+    return this.dbStore.getUserPermissions(userId);
   }
 
   async close(): Promise<void> {

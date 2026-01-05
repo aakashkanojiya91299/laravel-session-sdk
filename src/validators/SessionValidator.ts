@@ -83,6 +83,7 @@ export class SessionValidator {
 
     this.log('✅ Session payload decoded');
     this.log('   Session keys:', Object.keys(sessionData));
+    this.log('   Full session data:', JSON.stringify(sessionData, null, 2));
 
     // Step 5: Get user ID from session
     const userId = this.decoder.getUserId(sessionData);
@@ -145,10 +146,29 @@ export class SessionValidator {
       this.log('✅ 2FA verified');
     }
 
-    // Step 10: Get permissions from session
-    const permissions = this.decoder.getPermissions(sessionData);
+    // Step 10: Get permissions from session payload first, then fall back to database
+    this.log('🔍 Step 10: Getting permissions...');
+    let permissions = this.decoder.getPermissions(sessionData);
+    
+    // If permissions not in session payload, fetch from database
+    if (!permissions) {
+      this.log('⚠️  Permissions not found in session payload, fetching from database...');
+      try {
+        permissions = await this.store.getUserPermissions(userId);
+        this.log('✅ Permissions fetched from database successfully');
+        this.log('📄 Database permissions:', JSON.stringify(permissions, null, 2));
+      } catch (error: any) {
+        this.log('❌ Failed to fetch permissions from database:', error.message);
+        // Continue without permissions - let the app decide if this is critical
+        permissions = null;
+      }
+    } else {
+      this.log('✅ Permissions found in session payload');
+      this.log('📄 Session permissions:', JSON.stringify(permissions, null, 2));
+    }
 
     this.log('🎉 Session validation successful!');
+    this.log('Final permissions object:', permissions);
 
     // Return validated session data
     return {

@@ -42,6 +42,15 @@ export interface LaravelSessionConfig {
    * Enable debug logging
    */
   debug?: boolean;
+
+  /**
+   * Custom permissions key(s) in session
+   * Can be a single string or array of strings for multiple keys
+   * If not specified, will check common keys: 'permissions', 'user_permissions', etc.
+   * Examples: 'permissions', ['permissions', 'competitionIds', 'competitionsData']
+   * Supports dot notation: 'user.permissions', 'auth.permissions'
+   */
+  permissionsKey?: string | string[];
 }
 
 export interface SessionData {

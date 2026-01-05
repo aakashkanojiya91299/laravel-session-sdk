@@ -1,158 +1,73 @@
-## [1.0.3] - 2026-01-02
-
-### Added
-- **Comprehensive Laravel class support**: Extended class support to include ALL common Laravel classes
-  - All classes from v1.0.2 plus enhanced coverage
-  - Complete class mapping system with addClassMapping() API
-  - Documentation for all supported scenarios
-
-### Changed
-- Version bump to 1.0.3 for comprehensive class support release
-- Enhanced PhpSerializer with full class mapping capabilities
-
-### Documentation
-- Added `COMPREHENSIVE_CLASS_SUPPORT.md` - Complete feature guide
-- Added `SUPPORTED_CLASSES.md` - Full class reference
-- Updated all version references from 1.0.2 to 1.0.3
 # Changelog
 
 All notable changes to the Laravel Session SDK will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [1.0.2] - 2026-01-02
+## [1.3.0] - 2025-01-02
 
 ### Added
-- **Comprehensive Laravel class support**: Added support for all common Laravel/PHP classes
-  - `stdClass` - Generic PHP objects
-  - `Illuminate\Support\Collection` - Laravel collections
-  - `Illuminate\Database\Eloquent\Collection` - Eloquent model collections
-  - `Carbon\Carbon` - Date/time objects
-  - `Carbon\CarbonImmutable` - Immutable date objects
-  - `Illuminate\Support\MessageBag` - Validation error messages
-  - `Illuminate\Support\ViewErrorBag` - Multiple error bags
-  - `Illuminate\Database\Eloquent\Model` - Eloquent models
-- **Custom class mapping API**: New methods for adding custom class support
-  - `PhpSerializer.addClassMapping()` - Add custom class mappings
-  - `PhpSerializer.getClassMappings()` - Get current class mappings
-
-### Fixed
-- **PHP class deserialization errors**: Fixed all "Class not found in given scope" errors
-  - Sessions with any common Laravel class now deserialize correctly
-  - Proactive support for most Laravel session scenarios
+- **Multiple permissions keys support**: `permissionsKey` now accepts an array of strings to extract multiple session keys at once
+  - Example: `permissionsKey: ['permissions', 'competitionIds', 'competitionsData', 'competitionCategories']`
+  - Returns an object containing all requested keys
+  - Backward compatible: single string still works as before
+  - Perfect for extracting competition data, categories, and other custom session keys
 
 ### Changed
-- Completely refactored `src/decoders/PhpSerializer.ts` with comprehensive class support
-- Improved error messages for truly unknown classes
+- `permissionsKey` type changed from `string` to `string | string[]` to support multiple keys
+- `SessionDecoder.getPermissions()` now handles both single key and array of keys
+- `DatabaseStore` constructor signature updated to accept array of permission keys
+- `RedisStore` constructor signature updated to accept array of permission keys
+- `SessionDecoder.getNestedValue()` extracted as a private helper method for reusability
 
-### Documentation
-- Added `SUPPORTED_CLASSES.md` - Complete guide to supported classes
-- Added `STDCLASS_FIX.md` - Technical details of the fix
-- Added `CHANGELOG.md` - This file
-- Added `VERSION_1.0.2_RELEASE.md` - Release notes
+### Improved
+- Better logging for permission extraction process showing which keys were found/not found
+- Enhanced support for extracting multiple types of data from session (permissions, competitions, categories, etc.)
+- More flexible session data extraction
 
-## [1.0.1] - 2025-12-XX
-
-### Added
-- Initial release of Laravel Session SDK
-- Support for Database and Redis session stores
-- Express.js middleware
-- Next.js middleware
-- NestJS support
-- Session validation and user authentication
-- TypeScript support
-- Comprehensive documentation
-
-### Features
-- Validate Laravel sessions from Node.js applications
-- Automatic session decryption
-- CSRF token validation
-- User authentication helpers
-- 2FA verification support
-- Custom session data access
-- Multiple framework support (Express, Next.js, NestJS)
-
-## [1.0.0] - 2025-12-XX
+## [1.2.0] - 2025-01-02
 
 ### Added
-- Initial development version
+- **Dual-source permissions strategy**: Permissions are now fetched from session payload first, with automatic fallback to database tables
+- **Database fallback for permissions**: If permissions are not found in the session payload, the SDK automatically fetches them from database tables (`user_roles`, `modules`, `links`)
+- **Configurable permissions key**: Users can now specify custom keys for permissions in session via `permissionsKey` config option
+- **Support for nested permission keys**: Dot notation support (e.g., `user.permissions`, `auth.permissions`)
 
----
+### Changed
+- `DatabaseStore.getUserPermissions()` now tries session payload first, then falls back to database queries
+- Updated `DatabaseStore` constructor to accept `appKey` and `permissionsKey` parameters
+- Updated `RedisStore` constructor to pass through `appKey` and `permissionsKey` to DatabaseStore
 
-## Version History Summary
+### Improved
+- Better logging for permission extraction process
+- More detailed error messages when permissions cannot be found
+- Automatic detection of common permission keys in session
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.2 | 2026-01-02 | Fixed stdClass deserialization |
-| 1.0.1 | 2025-12-XX | Initial public release |
-| 1.0.0 | 2025-12-XX | Development version |
+## [1.1.0] - 2025-01-02
 
-## Upgrade Guide
+### Added
+- Configurable permissions key in `LaravelSessionConfig`
+- Support for extracting permissions from session payload
+- Extensive logging for debugging session decoding
 
-### From 1.0.1 to 1.0.2
+### Changed
+- `SessionDecoder.getPermissions()` now accepts configurable permission key
+- Improved PHP class support (stdClass, Collections, Carbon, etc.)
 
-No breaking changes. Simply update the package:
+## [1.0.5] - 2025-01-01
 
-```bash
-npm update laravel-session-sdk
-# or
-yarn upgrade laravel-session-sdk
-```
+### Fixed
+- Fixed stdClass handling in PHP unserialize
 
-The stdClass fix is backward compatible and requires no code changes.
+## [1.0.4] - 2025-01-01
 
-## Migration Notes
+### Added
+- Added `getUserPermissions` method to `StoreInterface`
+- Redis store now delegates permission queries to DatabaseStore
 
-### Version 1.0.2
+## [1.0.3] - 2024-12-31
 
-**What Changed:**
-- PhpSerializer now properly handles stdClass objects
-
-**Impact:**
-- ✅ Sessions with stdClass objects will now work
-- ✅ No code changes required
-- ✅ Fully backward compatible
-
-**Before (1.0.1):**
-```
-❌ Error: Class stdClass not found in given scope
-```
-
-**After (1.0.2):**
-```
-✅ Session deserialized successfully
-```
-
-## Known Issues
-
-### Version 1.0.2
-- None currently known
-
-### Version 1.0.1
-- ~~stdClass deserialization fails~~ (Fixed in 1.0.2)
-
-## Upcoming Features
-
-See [GitHub Issues](https://github.com/aakashkanojiya91299/laravel-session-sdk/issues) for planned features and enhancements.
-
-Potential future additions:
-- Support for more session drivers (File, Cookie, etc.)
-- Session writing/updating capabilities
-- More helper methods for common session operations
-- Performance optimizations
-- Additional middleware options
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on contributing to this project.
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/aakashkanojiya91299/laravel-session-sdk/issues)
-- **Documentation**: [README.md](README.md)
-- **Email**: aakash.wowrooms69@gmail.com
-
----
-
-**Note**: This SDK is actively maintained. Please report any issues or suggestions on GitHub.
+### Initial Release
+- Basic Laravel session validation
+- Database and Redis session drivers
+- Express and NestJS middleware support
+- Session cookie decryption
+- Session payload decoding

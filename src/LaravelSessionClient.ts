@@ -14,15 +14,20 @@ export class LaravelSessionClient {
   constructor(config: LaravelSessionConfig) {
     this.config = config;
 
-    // Initialize decoder
-    this.decoder = new SessionDecoder(config.appKey);
+    // Initialize decoder with optional custom permissions key
+    this.decoder = new SessionDecoder(config.appKey, config.permissionsKey);
 
     // Initialize store based on driver
     if (config.session.driver === 'database') {
       if (!config.database) {
         throw new Error('Database configuration is required for database session driver');
       }
-      this.store = new DatabaseStore(config.database, config.session.table || 'sessions');
+      this.store = new DatabaseStore(
+        config.database, 
+        config.session.table || 'sessions',
+        config.appKey,
+        config.permissionsKey
+      );
     } else {
       throw new Error(`Unsupported session driver: ${config.session.driver}. Only 'database' driver is supported in this build.`);
     }

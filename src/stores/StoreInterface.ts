@@ -17,6 +17,11 @@ export interface StoreInterface {
   getUserRole(userId: number): Promise<string | null>;
 
   /**
+   * Get user permissions (modules and links)
+   */
+  getUserPermissions(userId: number): Promise<any>;
+
+  /**
    * Close store connection
    */
   close(): Promise<void>;
