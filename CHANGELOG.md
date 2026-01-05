@@ -2,6 +2,25 @@
 
 All notable changes to the Laravel Session SDK will be documented in this file.
 
+## [1.4.0] - 2026-01-05
+
+### Added
+- **Conditional debug logging**: All logging now respects the `debug` configuration option
+  - Logging only occurs when `debug: true` is set in configuration
+  - Reduces console noise in production environments
+  - All classes (`LaravelSessionClient`, `SessionDecoder`, `DatabaseStore`) now support conditional logging
+
+### Changed
+- `LaravelSessionClient` now accepts and passes `debug` flag to child components
+- `SessionDecoder` constructor now accepts optional `debug` parameter (default: `false`)
+- `DatabaseStore` constructor now accepts optional `debug` parameter (default: `false`)
+- All `console.log` and `console.error` calls replaced with conditional logging methods
+
+### Improved
+- Better production performance by eliminating unnecessary logging
+- Cleaner console output when debug mode is disabled
+- Debug mode can be easily toggled via configuration
+
 ## [1.3.0] - 2025-01-02
 
 ### Added

@@ -15,7 +15,8 @@ export class RedisStore implements StoreInterface {
     prefix = 'laravel_session:',
     sessionTable = 'sessions',
     appKey?: string,
-    permissionsKey?: string | string[]
+    permissionsKey?: string | string[],
+    debug: boolean = false
   ) {
     if (!redisConfig) {
       throw new Error('Redis configuration is required');
@@ -32,7 +33,7 @@ export class RedisStore implements StoreInterface {
     });
 
     // Database store for user/role queries and permissions
-    this.dbStore = new DatabaseStore(dbConfig, sessionTable, appKey, permissionsKey);
+    this.dbStore = new DatabaseStore(dbConfig, sessionTable, appKey, permissionsKey, debug);
   }
 
   private async ensureConnected(): Promise<void> {
