@@ -1,6 +1,7 @@
 import { Pool, createPool, RowDataPacket } from 'mysql2/promise';
 import { StoreInterface } from './StoreInterface';
 import { SessionRecord, LaravelUser, LaravelSessionConfig } from '../types';
+import { sanitizeSessionId, sanitizeError } from '../utils/SecurityUtils';
 
 export class DatabaseStore implements StoreInterface {
   private pool: Pool;
@@ -53,7 +54,7 @@ export class DatabaseStore implements StoreInterface {
     try {
       this.log('🔍 Fetching session from database...');
       this.log('📋 Table:', this.sessionTable);
-      this.log('🆔 Session ID:', sessionId);
+      this.log('🆔 Session ID:', sanitizeSessionId(sessionId));
       
       const [rows] = await this.pool.execute<RowDataPacket[]>(
         `SELECT * FROM ${this.sessionTable} WHERE id = ? LIMIT 1`,
@@ -83,8 +84,8 @@ export class DatabaseStore implements StoreInterface {
       
       return rows[0] as SessionRecord;
     } catch (error: any) {
-      this.logError('❌ Failed to get session:', error.message);
-      throw new Error(`Failed to get session: ${error.message}`);
+      this.logError('❌ Failed to get session:', sanitizeError(error));
+      throw new Error(`Failed to get session: ${sanitizeError(error)}`);
     }
   }
 
@@ -177,9 +178,8 @@ export class DatabaseStore implements StoreInterface {
 
       return await this.getAllPermissionsFromDatabase(userId);
     } catch (error: any) {
-      this.logError('❌ Failed to get user permissions from session:', error.message);
-      this.logError('❌ Full error:', error);
-      throw new Error(`Failed to get user permissions: ${error.message}`);
+      this.logError('❌ Failed to get user permissions from session:', sanitizeError(error));
+      throw new Error(`Failed to get user permissions: ${sanitizeError(error)}`);
     }
   }
 

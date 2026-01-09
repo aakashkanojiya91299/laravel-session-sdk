@@ -358,6 +358,36 @@ const client = new LaravelSessionClient({
 });
 ```
 
+### Log Verbosity Levels (v1.4.4+)
+
+Control how much sensitive data is shown in logs:
+
+**Secure Mode (Default - Recommended for Production):**
+```typescript
+const client = new LaravelSessionClient({
+  database: { /* ... */ },
+  session: { driver: 'database' },
+  debug: true,
+  logLevel: 'secure', // Sanitized logs, no sensitive data (default)
+});
+```
+
+**Verbose Mode (Development Only - Shows All Data):**
+```typescript
+const client = new LaravelSessionClient({
+  database: { /* ... */ },
+  session: { driver: 'database' },
+  debug: true,
+  logLevel: 'verbose', // Full logs with sensitive data (use only in secure dev environments)
+});
+```
+
+**⚠️ Security Warning:** 
+- `logLevel: 'secure'` (default) - Masks session IDs, tokens, passwords, and sensitive data
+- `logLevel: 'verbose'` - Shows full session data, decrypted values, user IDs, etc.
+- **Never use `verbose` mode in production** - it exposes sensitive information
+- Use `verbose` only in secure development environments for debugging
+
 ## 🔒 Laravel Setup (Zero Code Changes!)
 
 ### Option 1: Database Session Driver
@@ -444,6 +474,7 @@ interface LaravelSessionConfig {
   };
   appKey?: string; // Laravel APP_KEY for encrypted sessions
   debug?: boolean; // Enable debug logging (v1.4.0+)
+  logLevel?: 'secure' | 'verbose'; // Log verbosity: 'secure' (default) or 'verbose' (v1.4.4+)
   permissionsKey?: string | string[]; // Custom permissions key(s) (v1.3.0+)
 }
 ```
@@ -835,6 +866,26 @@ const client = new LaravelSessionClient({
 ```
 
 Debug logs will show session validation steps, permission extraction, and any errors. Disable in production for better performance.
+
+### Q: Can I see full logs with sensitive data for debugging?
+
+**A:** Yes, but use with extreme caution! Set `logLevel: 'verbose'`:
+
+```typescript
+const client = new LaravelSessionClient({
+  database: { /* ... */ },
+  session: { driver: 'database' },
+  debug: true,
+  logLevel: 'verbose', // Shows full session data, decrypted values, etc.
+});
+```
+
+**⚠️ Important Security Notes:**
+- **Default is `logLevel: 'secure'`** - sanitizes sensitive data (recommended)
+- **`logLevel: 'verbose'`** - shows everything including session IDs, tokens, passwords
+- **Never use `verbose` in production** - it violates security best practices
+- Use `verbose` only in secure development environments when you need to debug session issues
+- The SDK defaults to `secure` mode to prevent CWE-312, CWE-359, and CWE-532 vulnerabilities
 
 ### Q: What's the performance impact?
 

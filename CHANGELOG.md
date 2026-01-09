@@ -2,6 +2,30 @@
 
 All notable changes to the Laravel Session SDK will be documented in this file.
 
+## [1.4.4] - 2026-01-09
+
+### Security
+- **Fixed CWE-312 (Cleartext Storage)**: Removed logging of sensitive data including passwords, tokens, and session IDs
+- **Fixed CWE-359 (Privacy Violation)**: Sanitized all debug logs to prevent exposure of user information, session data, and authentication tokens
+- **Fixed CWE-532 (Sensitive Info in Logs)**: Implemented comprehensive log sanitization utilities to mask sensitive information in debug output
+- Added `SecurityUtils` module with functions to sanitize sensitive data in logs
+- Session IDs are now masked/truncated in logs (shows only first 8 chars) by default
+- Decrypted values, MAC addresses, and session payloads are no longer logged in full by default
+- User IDs and email addresses are sanitized in debug output by default
+- Full session data and permissions data are sanitized before logging by default
+
+### Added
+- **Log verbosity levels**: New `logLevel` configuration option
+  - `'secure'` (default): Sanitized logs, no sensitive data exposed (recommended for production)
+  - `'verbose'`: Full logs with sensitive data (use only in secure development environments)
+- Developers can now opt-in to verbose logging when needed for debugging
+
+### Changed
+- All debug logging now uses sanitization utilities by default to prevent sensitive data exposure
+- Error messages are sanitized to remove potential sensitive information by default
+- Logging shows sanitized/masked versions of sensitive data in secure mode (default)
+- Verbose mode available for debugging when explicitly enabled
+
 ## [1.4.2] - 2026-01-09
 
 ### Improved

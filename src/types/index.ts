@@ -44,6 +44,15 @@ export interface LaravelSessionConfig {
   debug?: boolean;
 
   /**
+   * Log verbosity level
+   * - 'secure' (default): Sanitized logs, no sensitive data exposed (recommended for production)
+   * - 'verbose': Full logs with sensitive data (use only in secure development environments)
+   * 
+   * @default 'secure'
+   */
+  logLevel?: 'secure' | 'verbose';
+
+  /**
    * Custom permissions key(s) in session
    * Can be a single string or array of strings for multiple keys
    * If not specified, will check common keys: 'permissions', 'user_permissions', etc.

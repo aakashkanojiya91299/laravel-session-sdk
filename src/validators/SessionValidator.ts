@@ -1,6 +1,7 @@
 import { SessionDecoder } from '../decoders/SessionDecoder';
 import { StoreInterface } from '../stores/StoreInterface';
 import { SessionValidationResult, LaravelSessionConfig } from '../types';
+import { sanitizeSessionId, sanitizeObject, sanitizeError, shouldSanitize } from '../utils/SecurityUtils';
 
 export class SessionValidator {
   private decoder: SessionDecoder;
@@ -30,7 +31,7 @@ export class SessionValidator {
       };
     }
 
-    this.log('🔍 Validating session:', sessionId);
+    this.log('🔍 Validating session:', sanitizeSessionId(sessionId));
 
     // Step 2: Get session from store
     const session = await this.store.getSession(sessionId);
@@ -82,8 +83,13 @@ export class SessionValidator {
     }
 
     this.log('✅ Session payload decoded');
-    this.log('   Session keys:', Object.keys(sessionData));
-    this.log('   Full session data:', JSON.stringify(sessionData, null, 2));
+    if (shouldSanitize()) {
+      const sanitizedKeys = Object.keys(sessionData).filter(key => !key.toLowerCase().includes('token') && !key.toLowerCase().includes('password'));
+      this.log('   Session keys (sanitized):', sanitizedKeys.length, 'keys');
+    } else {
+      this.log('   Session keys:', Object.keys(sessionData));
+      this.log('   Full session data:', JSON.stringify(sessionData, null, 2));
+    }
 
     // Step 5: Get user ID from session
     const userId = this.decoder.getUserId(sessionData);
@@ -96,7 +102,11 @@ export class SessionValidator {
       };
     }
 
-    this.log('✅ User authenticated, ID:', userId);
+    if (shouldSanitize()) {
+      this.log('✅ User authenticated');
+    } else {
+      this.log('✅ User authenticated, ID:', userId);
+    }
 
     // Step 6: Get user from database
     const user = await this.store.getUser(userId);
@@ -110,7 +120,6 @@ export class SessionValidator {
     }
 
     this.log('✅ User found in database');
-    this.log('   Email:', user.email);
 
     // Step 7: Get user role
     const role = await this.store.getUserRole(userId);
@@ -121,8 +130,7 @@ export class SessionValidator {
     if (role === 'Shooter' && user.session_id) {
       if (user.session_id !== sessionId) {
         this.log('❌ Shooter single session check failed');
-        this.log('   Expected:', user.session_id);
-        this.log('   Got:', sessionId);
+        this.log('   Session mismatch detected');
         return {
           valid: false,
           error: 'Session invalidated. You were logged in elsewhere.',
@@ -156,19 +164,22 @@ export class SessionValidator {
       try {
         permissions = await this.store.getUserPermissions(userId);
         this.log('✅ Permissions fetched from database successfully');
-        this.log('📄 Database permissions:', JSON.stringify(permissions, null, 2));
       } catch (error: any) {
-        this.log('❌ Failed to fetch permissions from database:', error.message);
+        this.log('❌ Failed to fetch permissions from database:', sanitizeError(error));
         // Continue without permissions - let the app decide if this is critical
         permissions = null;
       }
     } else {
       this.log('✅ Permissions found in session payload');
-      this.log('📄 Session permissions:', JSON.stringify(permissions, null, 2));
+      if (!shouldSanitize()) {
+        this.log('📄 Session permissions:', JSON.stringify(permissions, null, 2));
+      }
     }
 
     this.log('🎉 Session validation successful!');
-    this.log('Final permissions object:', permissions);
+    if (!shouldSanitize()) {
+      this.log('Final permissions object:', permissions);
+    }
 
     // Return validated session data
     return {

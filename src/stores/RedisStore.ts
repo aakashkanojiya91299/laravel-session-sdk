@@ -2,6 +2,7 @@ import { createClient, RedisClientType } from 'redis';
 import { StoreInterface } from './StoreInterface';
 import { SessionRecord, LaravelUser, LaravelSessionConfig } from '../types';
 import { DatabaseStore } from './DatabaseStore';
+import { sanitizeSessionId, sanitizeError } from '../utils/SecurityUtils';
 
 export class RedisStore implements StoreInterface {
   private client: RedisClientType;
@@ -63,8 +64,8 @@ export class RedisStore implements StoreInterface {
 
       const key = `${this.prefix}${sessionId}`;
       this.log('🔍 Fetching session from Redis...');
-      this.log('📋 Key:', key);
-      this.log('🆔 Session ID:', sessionId);
+      this.log('📋 Key prefix:', this.prefix);
+      this.log('🆔 Session ID:', sanitizeSessionId(sessionId));
       
       const payload = await this.client.get(key);
 
@@ -85,8 +86,8 @@ export class RedisStore implements StoreInterface {
         last_activity: Math.floor(Date.now() / 1000),
       };
     } catch (error: any) {
-      this.logError('❌ Failed to get session from Redis:', error.message);
-      throw new Error(`Failed to get session from Redis: ${error.message}`);
+      this.logError('❌ Failed to get session from Redis:', sanitizeError(error));
+      throw new Error(`Failed to get session from Redis: ${sanitizeError(error)}`);
     }
   }
 

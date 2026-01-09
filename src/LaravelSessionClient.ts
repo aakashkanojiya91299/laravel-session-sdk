@@ -4,6 +4,7 @@ import { RedisStore } from './stores/RedisStore';
 import { SessionValidator } from './validators/SessionValidator';
 import { StoreInterface } from './stores/StoreInterface';
 import { LaravelSessionConfig, SessionValidationResult } from './types';
+import { sanitizeSessionId, sanitizeError, setLogLevel, shouldSanitize } from './utils/SecurityUtils';
 
 export class LaravelSessionClient {
   private decoder: SessionDecoder;
@@ -15,6 +16,9 @@ export class LaravelSessionClient {
   constructor(config: LaravelSessionConfig) {
     this.config = config;
     this.debug = config.debug || false;
+    
+    // Set log verbosity level (default: 'secure')
+    setLogLevel(config.logLevel || 'secure');
 
     // Initialize decoder with optional custom permissions key and debug flag
     this.decoder = new SessionDecoder(config.appKey, config.permissionsKey, this.debug);
@@ -71,8 +75,7 @@ export class LaravelSessionClient {
    * Validate a Laravel session
    */
   async validateSession(sessionId: string): Promise<SessionValidationResult> {
-    this.log('🔐 Original cookie value (first 50 chars):', sessionId.substring(0, 50) + '...');
-    this.log('🔐 Cookie value length:', sessionId.length);
+    this.log('🔐 Session cookie received, length:', sessionId.length);
 
     // Decrypt session ID if appKey is configured (for encrypted cookies)
     let decryptedSessionId = sessionId;
@@ -83,8 +86,10 @@ export class LaravelSessionClient {
         const decrypted = this.decoder.decrypt(sessionId);
         if (decrypted) {
           this.log('✅ Successfully decrypted cookie');
-          this.log('🔓 Decrypted value:', decrypted);
-          this.log('🔓 Decrypted value length:', decrypted.length);
+          if (!shouldSanitize()) {
+            this.log('🔓 Decrypted value:', decrypted);
+            this.log('🔓 Decrypted value length:', decrypted.length);
+          }
 
           decryptedSessionId = decrypted;
 
@@ -93,22 +98,25 @@ export class LaravelSessionClient {
           if (decryptedSessionId.includes('|')) {
             const parts = decryptedSessionId.split('|');
             this.log('🔀 Detected pipe separator in decrypted value');
-            this.log('🔀 Parts:', parts);
-            this.log('🔀 Using second part as session ID:', parts[1]);
+            if (shouldSanitize()) {
+              this.log('🔀 Using second part as session ID');
+            } else {
+              this.log('🔀 Parts:', parts);
+              this.log('🔀 Using second part as session ID:', parts[1]);
+            }
             decryptedSessionId = parts[1];
           }
         }
       } catch (error: any) {
         // If decryption fails, try using the sessionId as-is (might not be encrypted)
-        this.logError('❌ Session ID decryption failed:', error.message);
-        this.logError('❌ Full error:', error);
+        this.logError('❌ Session ID decryption failed:', sanitizeError(error));
         this.log('⚠️  Using original cookie value as session ID');
       }
     } else {
       this.log('⚠️  No APP_KEY configured, using cookie value as-is');
     }
 
-    this.log('🎯 Final session ID to validate:', decryptedSessionId);
+    this.log('🎯 Validating session:', sanitizeSessionId(decryptedSessionId));
 
     return this.validator.validate(decryptedSessionId);
   }

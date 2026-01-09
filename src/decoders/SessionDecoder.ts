@@ -1,6 +1,7 @@
 import { PhpSerializer } from './PhpSerializer';
 import { SessionData } from '../types';
 import * as crypto from 'crypto';
+import { sanitizeObject, sanitizeError, maskSensitive, shouldSanitize } from './utils/SecurityUtils';
 
 export class SessionDecoder {
   private appKey?: Buffer;
@@ -36,23 +37,21 @@ export class SessionDecoder {
     try {
       this.log('🔓 Decoding session payload...');
       this.log('📦 Payload length:', payload.length);
-      this.log('📦 Payload (first 100 chars):', payload.substring(0, 100) + '...');
       
       // Step 1: Base64 decode
       const decoded = Buffer.from(payload, 'base64').toString('utf-8');
       this.log('✅ Base64 decoded, length:', decoded.length);
-      this.log('📄 Decoded (first 200 chars):', decoded.substring(0, 200) + '...');
 
       // Step 2: Unserialize PHP format (stdClass support is built-in)
       const unserialized = PhpSerializer.unserialize(decoded);
       this.log('✅ PHP unserialized successfully');
-      this.log('🔑 Session keys:', Object.keys(unserialized));
+      const sanitizedKeys = Object.keys(unserialized).filter(key => !key.toLowerCase().includes('token') && !key.toLowerCase().includes('password'));
+      this.log('🔑 Session keys (sanitized):', sanitizedKeys.length, 'keys found');
 
       return unserialized;
     } catch (error: any) {
-      this.logError('❌ Session decode failed:', error.message);
-      this.logError('❌ Full error:', error);
-      throw new Error(`Session decode failed: ${error.message}`);
+      this.logError('❌ Session decode failed:', sanitizeError(error));
+      throw new Error(`Session decode failed: ${sanitizeError(error)}`);
     }
   }
 
@@ -67,7 +66,7 @@ export class SessionDecoder {
     try {
       this.log('📦 Parsing encrypted payload...');
       const payload = JSON.parse(Buffer.from(encryptedPayload, 'base64').toString());
-      this.log('📦 Payload keys:', Object.keys(payload));
+      this.log('📦 Payload structure parsed successfully');
 
       const iv = Buffer.from(payload.iv, 'base64');
       const value = Buffer.from(payload.value, 'base64');
@@ -79,9 +78,6 @@ export class SessionDecoder {
         .createHmac('sha256', this.appKey)
         .update(payload.iv + payload.value)  // Concatenate base64 strings, not decoded buffers
         .digest('hex');
-
-      this.log('🔐 Expected MAC:', mac);
-      this.log('🔐 Calculated MAC:', calculatedMac);
 
       if (calculatedMac !== mac) {
         throw new Error('MAC verification failed - calculated MAC does not match');
@@ -97,7 +93,6 @@ export class SessionDecoder {
 
       // The decrypted value might be PHP serialized, try to return as string
       const result = decrypted.toString();
-      this.log('🔓 Decrypted result:', result);
 
       // Check if result is PHP serialized (starts with s: for string serialization)
       // If it's PHP serialized, we need to unserialize it
@@ -107,15 +102,16 @@ export class SessionDecoder {
         // Format: s:length:"value";
         const match = result.match(/s:\d+:"(.*)";/);
         if (match && match[1]) {
-          this.log('✅ Extracted:', match[1]);
+          this.log('✅ Extracted session ID from PHP serialization');
           return match[1];
         }
       }
 
+      this.log('✅ Decryption completed');
       return result;
     } catch (error: any) {
-      this.logError('❌ Decryption error:', error.message);
-      throw new Error(`Decryption failed: ${error.message}`);
+      this.logError('❌ Decryption error:', sanitizeError(error));
+      throw new Error(`Decryption failed: ${sanitizeError(error)}`);
     }
   }
 
@@ -130,14 +126,16 @@ export class SessionDecoder {
 
     if (!authKey) {
       this.log('❌ No auth key found (login_web_*)');
-      this.log('📋 Available keys:', Object.keys(sessionData));
+      const sanitizedKeys = Object.keys(sessionData).filter(key => !key.toLowerCase().includes('token'));
+      this.log('📋 Available keys (sanitized):', sanitizedKeys.length, 'keys');
       return null;
     }
 
-    this.log('✅ Found auth key:', authKey);
-    this.log('👤 User ID:', sessionData[authKey]);
+    this.log('✅ Found auth key');
+    const userId = sessionData[authKey];
+    this.log('👤 User ID found');
     
-    return sessionData[authKey];
+    return userId;
   }
 
   /**
@@ -178,10 +176,12 @@ export class SessionDecoder {
         // If single key, return the value directly (backward compatible)
         // If multiple keys, return object with all keys
         if (keys.length === 1 && result[keys[0]] !== undefined) {
-          this.log('📄 Permissions data:', JSON.stringify(result[keys[0]], null, 2));
+          const sanitized = sanitizeObject(result[keys[0]]);
+          this.log('📄 Permissions data extracted (sanitized)');
           return result[keys[0]];
         } else {
-          this.log('📄 Multiple permissions data:', JSON.stringify(result, null, 2));
+          const sanitized = sanitizeObject(result);
+          this.log('📄 Multiple permissions data extracted (sanitized)');
           return result;
         }
       }
@@ -202,7 +202,6 @@ export class SessionDecoder {
     for (const key of permissionKeys) {
       if (sessionData[key]) {
         this.log(`✅ Found permissions in session key: ${key}`);
-        this.log('📄 Permissions data:', JSON.stringify(sessionData[key], null, 2));
         return sessionData[key];
       }
     }
@@ -211,7 +210,6 @@ export class SessionDecoder {
     if (sessionData.user && typeof sessionData.user === 'object') {
       if (sessionData.user.permissions) {
         this.log('✅ Found permissions in user.permissions');
-        this.log('📄 Permissions data:', JSON.stringify(sessionData.user.permissions, null, 2));
         return sessionData.user.permissions;
       }
     }
@@ -220,13 +218,11 @@ export class SessionDecoder {
     if (sessionData.auth && typeof sessionData.auth === 'object') {
       if (sessionData.auth.permissions) {
         this.log('✅ Found permissions in auth.permissions');
-        this.log('📄 Permissions data:', JSON.stringify(sessionData.auth.permissions, null, 2));
         return sessionData.auth.permissions;
       }
     }
     
     this.log('⚠️  No permissions found in session payload');
-    this.log('📋 Full session data for debugging:', JSON.stringify(sessionData, null, 2));
     return null;
   }
 
