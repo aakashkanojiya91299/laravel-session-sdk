@@ -1,6 +1,6 @@
 {
   "name": "laravel-session-sdk",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Universal SDK for validating and managing Laravel sessions in Node.js applications",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
