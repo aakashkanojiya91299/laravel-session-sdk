@@ -1,7 +1,7 @@
 import { PhpSerializer } from './PhpSerializer';
 import { SessionData } from '../types';
 import * as crypto from 'crypto';
-import { sanitizeObject, sanitizeError, maskSensitive, shouldSanitize } from './utils/SecurityUtils';
+import { sanitizeError, shouldSanitize } from '../utils/SecurityUtils';
 
 export class SessionDecoder {
   private appKey?: Buffer;
@@ -45,8 +45,13 @@ export class SessionDecoder {
       // Step 2: Unserialize PHP format (stdClass support is built-in)
       const unserialized = PhpSerializer.unserialize(decoded);
       this.log('✅ PHP unserialized successfully');
-      const sanitizedKeys = Object.keys(unserialized).filter(key => !key.toLowerCase().includes('token') && !key.toLowerCase().includes('password'));
-      this.log('🔑 Session keys (sanitized):', sanitizedKeys.length, 'keys found');
+      if (shouldSanitize()) {
+        const sanitizedKeys = Object.keys(unserialized).filter(key => !key.toLowerCase().includes('token') && !key.toLowerCase().includes('password'));
+        this.log('🔑 Session keys (sanitized):', sanitizedKeys.length, 'keys found');
+      } else {
+        this.log('🔑 Session keys:', Object.keys(unserialized));
+        this.log('📄 Full session data:', JSON.stringify(unserialized, null, 2));
+      }
 
       return unserialized;
     } catch (error: any) {
@@ -102,12 +107,20 @@ export class SessionDecoder {
         // Format: s:length:"value";
         const match = result.match(/s:\d+:"(.*)";/);
         if (match && match[1]) {
-          this.log('✅ Extracted session ID from PHP serialization');
+          if (shouldSanitize()) {
+            this.log('✅ Extracted session ID from PHP serialization');
+          } else {
+            this.log('✅ Extracted:', match[1]);
+          }
           return match[1];
         }
       }
 
-      this.log('✅ Decryption completed');
+      if (!shouldSanitize()) {
+        this.log('🔓 Decrypted result:', result);
+      } else {
+        this.log('✅ Decryption completed');
+      }
       return result;
     } catch (error: any) {
       this.logError('❌ Decryption error:', sanitizeError(error));
@@ -126,14 +139,22 @@ export class SessionDecoder {
 
     if (!authKey) {
       this.log('❌ No auth key found (login_web_*)');
-      const sanitizedKeys = Object.keys(sessionData).filter(key => !key.toLowerCase().includes('token'));
-      this.log('📋 Available keys (sanitized):', sanitizedKeys.length, 'keys');
+      if (shouldSanitize()) {
+        const sanitizedKeys = Object.keys(sessionData).filter(key => !key.toLowerCase().includes('token'));
+        this.log('📋 Available keys (sanitized):', sanitizedKeys.length, 'keys');
+      } else {
+        this.log('📋 Available keys:', Object.keys(sessionData));
+      }
       return null;
     }
 
-    this.log('✅ Found auth key');
+    this.log('✅ Found auth key:', authKey);
     const userId = sessionData[authKey];
-    this.log('👤 User ID found');
+    if (shouldSanitize()) {
+      this.log('👤 User ID found');
+    } else {
+      this.log('👤 User ID:', userId);
+    }
     
     return userId;
   }
@@ -176,12 +197,18 @@ export class SessionDecoder {
         // If single key, return the value directly (backward compatible)
         // If multiple keys, return object with all keys
         if (keys.length === 1 && result[keys[0]] !== undefined) {
-          const sanitized = sanitizeObject(result[keys[0]]);
-          this.log('📄 Permissions data extracted (sanitized)');
+          if (shouldSanitize()) {
+            this.log('📄 Permissions data extracted (sanitized)');
+          } else {
+            this.log('📄 Permissions data:', JSON.stringify(result[keys[0]], null, 2));
+          }
           return result[keys[0]];
         } else {
-          const sanitized = sanitizeObject(result);
-          this.log('📄 Multiple permissions data extracted (sanitized)');
+          if (shouldSanitize()) {
+            this.log('📄 Multiple permissions data extracted (sanitized)');
+          } else {
+            this.log('📄 Multiple permissions data:', JSON.stringify(result, null, 2));
+          }
           return result;
         }
       }

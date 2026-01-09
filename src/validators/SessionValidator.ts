@@ -1,7 +1,7 @@
 import { SessionDecoder } from '../decoders/SessionDecoder';
 import { StoreInterface } from '../stores/StoreInterface';
 import { SessionValidationResult, LaravelSessionConfig } from '../types';
-import { sanitizeSessionId, sanitizeObject, sanitizeError, shouldSanitize } from '../utils/SecurityUtils';
+import { sanitizeSessionId, sanitizeError, shouldSanitize } from '../utils/SecurityUtils';
 
 export class SessionValidator {
   private decoder: SessionDecoder;
