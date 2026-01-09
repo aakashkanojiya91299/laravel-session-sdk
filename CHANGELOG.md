@@ -2,7 +2,14 @@
 
 All notable changes to the Laravel Session SDK will be documented in this file.
 
-## [1.4.1] - 2026-01-XX
+## [1.4.2] - 2026-01-09
+
+### Improved
+- Updated installation instructions in README to clarify driver-based dependencies
+- Enhanced documentation for peer dependencies (mysql2, redis)
+- Improved installation section with clearer explanations
+
+## [1.4.1] - 2026-01-08
 
 ### Added
 - **Redis session driver support**: Full support for Redis session storage
