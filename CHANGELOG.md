@@ -2,6 +2,24 @@
 
 All notable changes to the Laravel Session SDK will be documented in this file.
 
+## [1.4.6] - 2026-01-09
+
+### Fixed
+- Fixed TypeScript compilation errors
+- Removed unused imports and variables
+- Fixed import paths in SessionDecoder and SessionValidator
+
+### Added
+- Added CONTRIBUTING.md with comprehensive contribution guidelines
+- Added security guidelines for contributors
+- Added development workflow documentation
+
+## [1.4.5] - 2026-01-09
+
+### Fixed
+- Fixed import path issues in SessionDecoder.ts
+- Resolved TypeScript compilation warnings
+
 ## [1.4.4] - 2026-01-09
 
 ### Security

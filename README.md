@@ -969,7 +969,30 @@ MIT © [Aakash Kanojiya](https://github.com/aakashkanojiya91299)
 
 ## 📝 Changelog
 
-### Version 1.4.0 (Latest)
+### Version 1.4.6 (Latest)
+- ✅ Fixed TypeScript compilation errors
+- ✅ Added CONTRIBUTING.md with contribution guidelines
+- ✅ Improved code quality and documentation
+
+### Version 1.4.5
+- ✅ Fixed import path issues
+- ✅ Resolved TypeScript compilation warnings
+
+### Version 1.4.4
+- ✅ Security fixes: Fixed CWE-312, CWE-359, and CWE-532 vulnerabilities
+- ✅ Log verbosity levels: Added `logLevel` option ('secure' or 'verbose')
+- ✅ Comprehensive log sanitization to prevent sensitive data exposure
+- ✅ SecurityUtils module for sanitizing sensitive data in logs
+
+### Version 1.4.2
+- ✅ Updated installation instructions for driver-based dependencies
+- ✅ Enhanced documentation for peer dependencies
+
+### Version 1.4.1
+- ✅ Redis session driver support enabled
+- ✅ RedisStore implementation with debug logging
+
+### Version 1.4.0
 - ✅ Conditional debug logging - all logging respects `debug` configuration option
 - ✅ Better production performance by eliminating unnecessary logging
 
