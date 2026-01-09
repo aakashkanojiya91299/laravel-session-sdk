@@ -2,6 +2,21 @@
 
 All notable changes to the Laravel Session SDK will be documented in this file.
 
+## [1.4.7] - 2026-01-09
+
+### Added
+- **CONTRIBUTING.md**: Comprehensive contribution guidelines for developers
+  - Development setup instructions
+  - Code style guidelines
+  - Security guidelines for contributors
+  - Pull request process documentation
+  - Commit message conventions
+
+### Improved
+- Updated README changelog section to reflect latest version
+- Enhanced documentation with contribution guidelines
+- Better developer onboarding experience
+
 ## [1.4.6] - 2026-01-09
 
 ### Fixed
