@@ -134,8 +134,9 @@ export class SessionDecoder {
       return null;
     }
 
-    this.log('✅ Found auth key:', authKey);
-    this.log('👤 User ID:', sessionData[authKey]);
+    // Do not log the actual auth key or user ID to avoid exposing sensitive data
+    this.log('✅ Auth key for user session found');
+    this.log('👤 User ID is present in session data (value not logged for security)');
     
     return sessionData[authKey];
   }
