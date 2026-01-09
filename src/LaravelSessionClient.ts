@@ -1,6 +1,6 @@
 import { SessionDecoder } from './decoders/SessionDecoder';
 import { DatabaseStore } from './stores/DatabaseStore';
-// import { RedisStore } from './stores/RedisStore'; // Disabled - not needed for database driver
+import { RedisStore } from './stores/RedisStore';
 import { SessionValidator } from './validators/SessionValidator';
 import { StoreInterface } from './stores/StoreInterface';
 import { LaravelSessionConfig, SessionValidationResult } from './types';
@@ -31,8 +31,24 @@ export class LaravelSessionClient {
         config.permissionsKey,
         this.debug
       );
+    } else if (config.session.driver === 'redis') {
+      if (!config.redis) {
+        throw new Error('Redis configuration is required for redis session driver');
+      }
+      if (!config.database) {
+        throw new Error('Database configuration is required for redis session driver (needed for user/role queries)');
+      }
+      this.store = new RedisStore(
+        config.redis,
+        config.database,
+        config.session.prefix || 'laravel_session:',
+        config.session.table || 'sessions',
+        config.appKey,
+        config.permissionsKey,
+        this.debug
+      );
     } else {
-      throw new Error(`Unsupported session driver: ${config.session.driver}. Only 'database' driver is supported in this build.`);
+      throw new Error(`Unsupported session driver: ${config.session.driver}. Supported drivers: 'database', 'redis'`);
     }
 
     // Initialize validator

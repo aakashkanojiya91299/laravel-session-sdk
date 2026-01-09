@@ -8,6 +8,7 @@ export class RedisStore implements StoreInterface {
   private prefix: string;
   private dbStore: DatabaseStore;
   private connected: boolean = false;
+  private debug: boolean;
 
   constructor(
     redisConfig: LaravelSessionConfig['redis'],
@@ -23,6 +24,7 @@ export class RedisStore implements StoreInterface {
     }
 
     this.prefix = prefix;
+    this.debug = debug;
     this.client = createClient({
       socket: {
         host: redisConfig.host,
@@ -34,6 +36,18 @@ export class RedisStore implements StoreInterface {
 
     // Database store for user/role queries and permissions
     this.dbStore = new DatabaseStore(dbConfig, sessionTable, appKey, permissionsKey, debug);
+  }
+
+  private log(...args: any[]): void {
+    if (this.debug) {
+      console.log('[RedisStore]', ...args);
+    }
+  }
+
+  private logError(...args: any[]): void {
+    if (this.debug) {
+      console.error('[RedisStore]', ...args);
+    }
   }
 
   private async ensureConnected(): Promise<void> {
@@ -48,21 +62,30 @@ export class RedisStore implements StoreInterface {
       await this.ensureConnected();
 
       const key = `${this.prefix}${sessionId}`;
+      this.log('🔍 Fetching session from Redis...');
+      this.log('📋 Key:', key);
+      this.log('🆔 Session ID:', sessionId);
+      
       const payload = await this.client.get(key);
 
       if (!payload) {
+        this.log('❌ Session not found in Redis');
         return null;
       }
 
+      this.log('✅ Session found in Redis');
+      this.log('📦 Payload length:', payload.length);
+
       return {
         id: sessionId,
-        user_id: null, // Redis doesn't store this separately
+        user_id: null, // Redis doesn't store this separately - extracted from payload
         ip_address: null,
         user_agent: null,
         payload: payload,
         last_activity: Math.floor(Date.now() / 1000),
       };
     } catch (error: any) {
+      this.logError('❌ Failed to get session from Redis:', error.message);
       throw new Error(`Failed to get session from Redis: ${error.message}`);
     }
   }

@@ -38,24 +38,49 @@
 
 - ✅ **Zero Laravel Code Changes** - Read-only session validation
 - ✅ **Multiple Frameworks** - Express, Next.js, NestJS support
-- ✅ **Database & Redis** - Supports both session drivers
+- ✅ **Database & Redis Sessions** - Full support for both session drivers
 - ✅ **TypeScript** - Full type definitions included
 - ✅ **Session Decoding** - Handles PHP serialization automatically
 - ✅ **Single Session Enforcement** - Respects Laravel's session logic
 - ✅ **2FA Support** - Validates two-factor authentication
-- ✅ **Permissions** - Access user permissions from session
-- ✅ **Production Ready** - Connection pooling, error handling, logging
+- ✅ **Dual-Source Permissions** - Extracts from session payload with database fallback
+- ✅ **Multiple Permissions Keys** - Extract multiple custom keys from session (v1.3.0+)
+- ✅ **Nested Key Support** - Dot notation for nested session keys (e.g., `user.permissions`)
+- ✅ **Debug Mode** - Conditional logging for development (v1.4.0+)
+- ✅ **Production Ready** - Connection pooling, error handling, graceful shutdown
 
 ## 📦 Installation
+
+### Database Session Driver (Recommended)
+
+If you're using database sessions:
 
 ```bash
 npm install laravel-session-sdk mysql2
 ```
 
-For Redis support:
+**Note:** `mysql2` is required as a peer dependency because the SDK needs it to connect to your database for session validation and user/role queries.
+
+### Redis Session Driver
+
+If you're using Redis sessions:
+
 ```bash
 npm install laravel-session-sdk mysql2 redis
 ```
+
+**Important:** Both `mysql2` and `redis` are required because:
+- `redis` is used to read session data from Redis
+- `mysql2` is **still required** because user information, roles, and permissions are stored in database tables (not in Redis)
+- The SDK uses Redis only for session storage, but queries the database for user/role/permission data
+
+### Why Peer Dependencies?
+
+`mysql2` and `redis` are **peer dependencies** (not automatically installed) because:
+- You may already have them installed in your project
+- Different projects may use different versions
+- You only need to install what your driver requires
+- Prevents version conflicts with your existing dependencies
 
 ## 🎯 Quick Start
 
@@ -282,9 +307,62 @@ const client = new LaravelSessionClient({
 });
 ```
 
+### With Custom Permissions Key
+
+```typescript
+const client = new LaravelSessionClient({
+  database: { /* ... */ },
+  session: { driver: 'database' },
+  // Single key (backward compatible)
+  permissionsKey: 'permissions',
+  // Or nested key with dot notation
+  permissionsKey: 'user.permissions',
+});
+```
+
+### With Multiple Permissions Keys (v1.3.0+)
+
+Extract multiple custom keys from the session at once:
+
+```typescript
+const client = new LaravelSessionClient({
+  database: { /* ... */ },
+  session: { driver: 'database' },
+  // Extract multiple keys from session
+  permissionsKey: [
+    'permissions',
+    'competitionIds',
+    'competitionsData',
+    'competitionCategories'
+  ],
+});
+
+// Result will be:
+// {
+//   permissions: { role: '...', modules: [...], links: [...] },
+//   competitionIds: [1, 5, 12],
+//   competitionsData: [...],
+//   competitionCategories: [...]
+// }
+```
+
+### With Debug Logging (v1.4.0+)
+
+Enable detailed logging for development:
+
+```typescript
+const client = new LaravelSessionClient({
+  database: { /* ... */ },
+  session: { driver: 'database' },
+  debug: process.env.NODE_ENV === 'development', // Enable debug logs
+});
+```
+
 ## 🔒 Laravel Setup (Zero Code Changes!)
 
-### Step 1: Change Session Driver
+### Option 1: Database Session Driver
+
+#### Step 1: Change Session Driver
 
 In your Laravel app's `.env`:
 
@@ -294,19 +372,45 @@ SESSION_DOMAIN=.yourdomain.com
 SESSION_SECURE_COOKIE=true
 ```
 
-### Step 2: Create Sessions Table
+#### Step 2: Create Sessions Table
 
 ```bash
 php artisan session:table
 php artisan migrate
 ```
 
-### Step 3: Clear Cache
+#### Step 3: Clear Cache
 
 ```bash
 php artisan config:cache
 php artisan cache:clear
 ```
+
+### Option 2: Redis Session Driver
+
+#### Step 1: Change Session Driver
+
+In your Laravel app's `.env`:
+
+```env
+SESSION_DRIVER=redis
+SESSION_CONNECTION=default
+SESSION_DOMAIN=.yourdomain.com
+SESSION_SECURE_COOKIE=true
+```
+
+#### Step 2: Configure Redis Connection
+
+Ensure Redis is configured in `config/database.php` and running.
+
+#### Step 3: Clear Cache
+
+```bash
+php artisan config:cache
+php artisan cache:clear
+```
+
+**Note:** Redis driver still requires database configuration in the SDK for user/role/permission queries.
 
 That's it! No code changes needed in Laravel.
 
@@ -318,9 +422,38 @@ That's it! No code changes needed in Laravel.
 
 Creates a new client instance.
 
+**Configuration Options:**
+
+```typescript
+interface LaravelSessionConfig {
+  database?: {
+    type: 'mysql' | 'postgres';
+    host: string;
+    port?: number;
+    user: string;
+    password: string;
+    database: string;
+    connectionLimit?: number; // Default: 10
+  };
+  session: {
+    driver: 'database' | 'redis' | 'file';
+    table?: string; // Default: 'sessions'
+    lifetime?: number; // In minutes
+    cookieName?: string; // Default: 'laravel_session'
+    prefix?: string; // For Redis driver
+  };
+  appKey?: string; // Laravel APP_KEY for encrypted sessions
+  debug?: boolean; // Enable debug logging (v1.4.0+)
+  permissionsKey?: string | string[]; // Custom permissions key(s) (v1.3.0+)
+}
+```
+
 #### `validateSession(sessionId: string): Promise<SessionValidationResult>`
 
 Validates a Laravel session and returns user data.
+
+**Parameters:**
+- `sessionId`: The Laravel session cookie value (may be encrypted)
 
 **Returns:**
 ```typescript
@@ -330,13 +463,29 @@ Validates a Laravel session and returns user data.
     id: number;
     email: string;
     name?: string;
+    google2fa_enable?: number;
+    [key: string]: any;
   };
   role?: string;
-  permissions?: any;
+  permissions?: any; // Single key: object, Multiple keys: object with keys
   sessionId?: string;
   csrfToken?: string;
   error?: string;
   reason?: string;
+}
+```
+
+**Example:**
+```typescript
+const result = await client.validateSession(cookieValue);
+
+if (result.valid) {
+  console.log('User:', result.user);
+  console.log('Role:', result.role);
+  
+  // Single permissionsKey: result.permissions is the value
+  // Multiple permissionsKey: result.permissions is an object with keys
+  console.log('Permissions:', result.permissions);
 }
 ```
 
@@ -347,6 +496,15 @@ Returns the session cookie name (default: `laravel_session`).
 #### `close(): Promise<void>`
 
 Closes all database connections. Call this during graceful shutdown.
+
+**Example:**
+```typescript
+// In your application shutdown handler
+process.on('SIGTERM', async () => {
+  await client.close();
+  process.exit(0);
+});
+```
 
 ### Middleware Functions
 
@@ -362,36 +520,55 @@ Helper for Next.js API routes.
 
 Creates Next.js middleware (for custom middleware chains).
 
-### Types
+### Permissions Extraction
+
+The SDK supports flexible permissions extraction with multiple strategies:
+
+#### Single Key (Default)
 
 ```typescript
-interface LaravelSessionConfig {
-  database?: {
-    type: 'mysql' | 'postgres';
-    host: string;
-    port?: number;
-    user: string;
-    password: string;
-    database: string;
-    connectionLimit?: number;
-  };
-  redis?: {
-    host: string;
-    port?: number;
-    password?: string;
-    db?: number;
-  };
-  session: {
-    driver: 'database' | 'redis';
-    table?: string;
-    lifetime?: number;
-    cookieName?: string;
-    prefix?: string;
-  };
-  appKey?: string;
-  debug?: boolean;
-}
+const client = new LaravelSessionClient({
+  permissionsKey: 'permissions', // Single string
+});
+
+// Result.permissions = { role: '...', modules: [...], links: [...] }
 ```
+
+#### Multiple Keys (v1.3.0+)
+
+```typescript
+const client = new LaravelSessionClient({
+  permissionsKey: ['permissions', 'competitionIds', 'competitionsData'],
+});
+
+// Result.permissions = {
+//   permissions: { role: '...', modules: [...] },
+//   competitionIds: [1, 5, 12],
+//   competitionsData: [...]
+// }
+```
+
+#### Nested Keys (Dot Notation)
+
+```typescript
+const client = new LaravelSessionClient({
+  permissionsKey: 'user.permissions', // Supports dot notation
+});
+```
+
+#### Dual-Source Strategy
+
+The SDK automatically uses a dual-source strategy for permissions:
+
+1. **Primary**: Extract from session payload (fast, single query)
+2. **Fallback**: Query database tables if not found in session
+
+This ensures permissions are always available, even if Laravel doesn't store them in the session. The fallback queries these tables:
+- `user_roles` → `roles`
+- `module_permissions` → `modules`
+- `link_permissions` → `links`
+
+See [DUAL_SOURCE_PERMISSIONS.md](./DUAL_SOURCE_PERMISSIONS.md) for details.
 
 ## 🔍 How It Works
 
@@ -427,29 +604,55 @@ interface LaravelSessionConfig {
 
 ### Connection Pooling
 
+The SDK uses connection pooling by default to reuse database connections:
+
 ```typescript
 const client = new LaravelSessionClient({
   database: {
     // ...
-    connectionLimit: 10, // Reuse connections
+    connectionLimit: 10, // Default: 10 connections in pool
   },
 });
 ```
+
+**Best Practices:**
+- Use singleton pattern to reuse client instance across requests
+- Adjust `connectionLimit` based on your application's concurrency
+- Call `client.close()` during graceful shutdown to release connections
+
+### Performance Characteristics
+
+**Session Payload Permissions (Primary):**
+- ⚡ **~10-20ms** per validation
+- Single database query
+- Fastest option
+
+**Database Fallback Permissions:**
+- 🐢 **~50-100ms** per validation
+- 3-4 database queries with JOINs
+- Always available, real-time data
 
 ### Caching (Optional)
 
 For high-traffic apps, cache validation results:
 
 ```typescript
-// Pseudo-code
+// Example with Redis caching
 const cacheKey = `session:${sessionId}`;
 let result = await redis.get(cacheKey);
 
 if (!result) {
   result = await client.validateSession(sessionId);
-  await redis.setex(cacheKey, 300, JSON.stringify(result)); // 5 min cache
+  if (result.valid) {
+    await redis.setex(cacheKey, 300, JSON.stringify(result)); // 5 min cache
+  }
 }
 ```
+
+**Cache Invalidation:**
+- Invalidate cache when user logs out
+- Consider shorter TTL for permissions if they change frequently
+- Use session expiration time as cache TTL
 
 ## 🧪 Testing
 
@@ -532,6 +735,49 @@ expect(result.user.email).toBe('test@example.com');
    ```
 2. Ensure APP_KEY format is correct (starts with `base64:`)
 3. Verify APP_KEY matches between Laravel and Node.js
+4. Enable debug mode to see decryption attempts:
+   ```typescript
+   debug: true
+   ```
+
+### Permissions Not Found
+
+**Problem**: `permissions` is `null` or `undefined` in validation result
+
+**Solutions**:
+1. Check if Laravel stores permissions in session:
+   ```php
+   // In Laravel, after login
+   session(['permissions' => [...]]);
+   ```
+2. Verify permissions key matches your Laravel session structure:
+   ```typescript
+   permissionsKey: 'permissions' // or 'user.permissions' for nested
+   ```
+3. The SDK will automatically fallback to database queries if not found in session
+4. Enable debug mode to see permission extraction process:
+   ```typescript
+   debug: true
+   ```
+
+### Multiple Keys Not Working
+
+**Problem**: When using array of `permissionsKey`, only some keys are returned
+
+**Solutions**:
+1. Ensure all keys exist in Laravel session:
+   ```php
+   session([
+     'permissions' => [...],
+     'competitionIds' => [...],
+     'competitionsData' => [...]
+   ]);
+   ```
+2. Keys that don't exist will be `undefined` in the result object
+3. Check debug logs to see which keys were found:
+   ```typescript
+   debug: true
+   ```
 
 ## ❓ FAQ
 
@@ -543,13 +789,52 @@ expect(result.user.email).toBe('test@example.com');
 
 **A:** No, this SDK requires database or Redis sessions. File-based sessions cannot be reliably shared across applications.
 
+### Q: Does Redis driver require database configuration?
+
+**A:** Yes, Redis driver still requires database configuration because user information, roles, and permissions are stored in database tables. Redis is only used for session storage, while database is used for user/role/permission queries.
+
 ### Q: Does this work with Laravel Sanctum or Passport?
 
 **A:** Yes! This SDK validates Laravel sessions regardless of the authentication system. It works with Laravel's built-in auth, Sanctum, Passport, or custom auth implementations.
 
 ### Q: Can I modify sessions from Node.js?
 
-**A:** This SDK is read-only for safety. Session modifications should only be done through Laravel to maintain data integrity. However, you can delete sessions (e.g., for logout).
+**A:** This SDK is read-only for safety. Session modifications should only be done through Laravel to maintain data integrity. However, you can delete sessions directly from the database if needed (e.g., for logout).
+
+### Q: How do I extract multiple custom keys from the session?
+
+**A:** Use the `permissionsKey` configuration option with an array of keys:
+
+```typescript
+const client = new LaravelSessionClient({
+  permissionsKey: ['permissions', 'competitionIds', 'competitionsData'],
+});
+
+const result = await client.validateSession(sessionId);
+// result.permissions.permissions - permissions data
+// result.permissions.competitionIds - competition IDs
+// result.permissions.competitionsData - competition data
+```
+
+See [MULTIPLE_PERMISSIONS_KEYS.md](./MULTIPLE_PERMISSIONS_KEYS.md) for detailed examples.
+
+### Q: How does the dual-source permissions strategy work?
+
+**A:** The SDK first tries to extract permissions from the session payload (fast). If not found, it automatically falls back to querying database tables (`user_roles`, `modules`, `links`). This ensures permissions are always available. See [DUAL_SOURCE_PERMISSIONS.md](./DUAL_SOURCE_PERMISSIONS.md) for details.
+
+### Q: How do I enable debug logging?
+
+**A:** Set `debug: true` in your configuration:
+
+```typescript
+const client = new LaravelSessionClient({
+  database: { /* ... */ },
+  session: { driver: 'database' },
+  debug: process.env.NODE_ENV === 'development',
+});
+```
+
+Debug logs will show session validation steps, permission extraction, and any errors. Disable in production for better performance.
 
 ### Q: What's the performance impact?
 
@@ -622,9 +907,30 @@ MIT © [Aakash Kanojiya](https://github.com/aakashkanojiya91299)
 - [GitHub Repository](https://github.com/aakashkanojiya91299/laravel-session-sdk)
 - [Report Issues](https://github.com/aakashkanojiya91299/laravel-session-sdk/issues)
 
+## 📚 Additional Documentation
+
+- **[CHANGELOG.md](./CHANGELOG.md)** - Version history and release notes
+- **[MULTIPLE_PERMISSIONS_KEYS.md](./MULTIPLE_PERMISSIONS_KEYS.md)** - Guide for extracting multiple session keys
+- **[DUAL_SOURCE_PERMISSIONS.md](./DUAL_SOURCE_PERMISSIONS.md)** - Understanding the dual-source permissions strategy
+- **[PERMISSIONS_KEY_GUIDE.md](./PERMISSIONS_KEY_GUIDE.md)** - Permissions key configuration guide
+- **[GETTING_STARTED.md](./GETTING_STARTED.md)** - Step-by-step getting started guide
+- **[LOCAL_TESTING_GUIDE.md](./LOCAL_TESTING_GUIDE.md)** - Guide for local development and testing
+
 ## 📝 Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.
+### Version 1.4.0 (Latest)
+- ✅ Conditional debug logging - all logging respects `debug` configuration option
+- ✅ Better production performance by eliminating unnecessary logging
+
+### Version 1.3.0
+- ✅ Multiple permissions keys support - extract multiple custom keys from session
+- ✅ Array support for `permissionsKey` configuration
+
+### Version 1.2.0
+- ✅ Dual-source permissions strategy - session payload with database fallback
+- ✅ Configurable permissions key with dot notation support
+
+See [CHANGELOG.md](./CHANGELOG.md) for complete version history.
 
 ---
 

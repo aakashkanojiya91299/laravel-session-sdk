@@ -2,6 +2,23 @@
 
 All notable changes to the Laravel Session SDK will be documented in this file.
 
+## [1.4.1] - 2026-01-XX
+
+### Added
+- **Redis session driver support**: Full support for Redis session storage
+  - Redis sessions can now be validated alongside database sessions
+  - RedisStore implementation with debug logging
+  - Database still required for user/role/permission queries when using Redis driver
+
+### Fixed
+- Enabled Redis driver support in LaravelSessionClient (was previously disabled)
+- Added debug logging to RedisStore to match DatabaseStore functionality
+
+### Improved
+- Updated README with comprehensive Redis driver documentation
+- Added Redis setup instructions in Laravel Setup section
+- Enhanced FAQ section with Redis-related questions
+
 ## [1.4.0] - 2026-01-05
 
 ### Added
