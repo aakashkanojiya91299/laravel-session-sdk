@@ -58,14 +58,52 @@ const classMap: { [key: string]: any } = {
   'Illuminate\\Database\\Eloquent\\Model': IlluminateDatabaseEloquentModel,
 };
 
+/**
+ * Creates a dynamic class for unknown PHP classes encountered during unserialization.
+ * The class acts as a plain object that can hold any deserialized properties,
+ * and preserves the original PHP class name via __php_classname.
+ */
+function createDynamicClass(className: string): any {
+  const DynamicClass = function(this: any) {
+    this.__php_classname = className;
+  } as any;
+  DynamicClass.prototype = Object.create(null);
+  DynamicClass.prototype.constructor = DynamicClass;
+  return DynamicClass;
+}
+
+/**
+ * Proxy-based scope that intercepts lookups for unknown PHP classes.
+ * When php-serialize encounters a class not in our classMap, the Proxy
+ * returns a dynamically created generic class instead of throwing.
+ * This allows ~200KB+ sessions with custom models (App\Models\*, Spatie\*, etc.)
+ * to deserialize without needing to pre-register every single PHP class.
+ */
+const classMapProxy = new Proxy(classMap, {
+  get(target, prop: string) {
+    if (prop in target) {
+      return target[prop];
+    }
+    // Dynamically create and cache a class for unknown PHP classes
+    const dynamicClass = createDynamicClass(prop);
+    target[prop] = dynamicClass;
+    return dynamicClass;
+  },
+  has(_target, _prop: string) {
+    // Always report that the class exists so php-serialize doesn't throw
+    return true;
+  },
+});
+
 export class PhpSerializer {
   /**
    * Unserialize PHP data to JavaScript object
    */
   static unserialize(data: string): any {
     try {
-      // Provide all common Laravel/PHP classes in the scope for php-serialize
-      return phpSerialize.unserialize(data, classMap);
+      // Use Proxy-based classMap so unknown PHP classes (e.g. App\Models\Competition,
+      // Spatie\Permission\Models\Role) deserialize as plain objects instead of throwing
+      return phpSerialize.unserialize(data, classMapProxy);
     } catch (error: any) {
       throw new Error(`PHP unserialization failed: ${error.message}`);
     }

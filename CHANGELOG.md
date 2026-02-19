@@ -2,6 +2,18 @@
 
 All notable changes to the Laravel Session SDK will be documented in this file.
 
+## [1.4.8] - 2026-02-19
+
+### Fixed
+- **Fixed PHP unserialization crash on large sessions (~200KB+)**: Changed base64 decoding from `utf-8` to `latin1` encoding in `SessionDecoder.decode()`. PHP's serialize format is byte-oriented (`s:N:"..."` counts bytes, not characters), so multi-byte characters (accented names, Unicode, emoji) in session data caused byte offsets to shift, resulting in `"Expected '"' at index X while unserializing payload"` errors.
+
+### Added
+- **Dynamic class mapping for unknown PHP classes**: Added a `Proxy`-based catch-all in `PhpSerializer` that automatically handles unknown PHP classes (e.g., `App\Models\Competition`, `Spatie\Permission\Models\Role`) by deserializing them as plain objects instead of throwing `"Class not found in given scope"` errors. Unknown classes are accessible as regular objects with a `__php_classname` property preserving the original PHP class name.
+
+### Improved
+- Sessions containing custom Eloquent models, Spatie permission objects, or any other application-specific PHP classes now deserialize without requiring manual `addClassMapping()` calls
+- Large bloated sessions with nested permission trees, competition data, and role hierarchies are now handled reliably
+
 ## [1.4.7] - 2026-01-09
 
 ### Added

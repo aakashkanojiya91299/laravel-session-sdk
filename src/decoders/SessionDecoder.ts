@@ -38,8 +38,12 @@ export class SessionDecoder {
       this.log('🔓 Decoding session payload...');
       this.log('📦 Payload length:', payload.length);
       
-      // Step 1: Base64 decode
-      const decoded = Buffer.from(payload, 'base64').toString('utf-8');
+      // Step 1: Base64 decode using latin1 (binary) encoding.
+      // PHP serialize format is byte-oriented — string lengths (s:N:"...") count bytes, not characters.
+      // Using 'utf-8' here would shift byte offsets when the payload contains multi-byte characters
+      // (accented names, Unicode, emoji, etc.), causing "Expected '"' at index X" parse errors.
+      // latin1 preserves the 1:1 byte-to-character mapping that php-serialize requires.
+      const decoded = Buffer.from(payload, 'base64').toString('latin1');
       this.log('✅ Base64 decoded, length:', decoded.length);
 
       // Step 2: Unserialize PHP format (stdClass support is built-in)
