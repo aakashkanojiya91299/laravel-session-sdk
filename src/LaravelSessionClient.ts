@@ -20,8 +20,8 @@ export class LaravelSessionClient {
     // Set log verbosity level (default: 'secure')
     setLogLevel(config.logLevel || 'secure');
 
-    // Initialize decoder with optional custom permissions key and debug flag
-    this.decoder = new SessionDecoder(config.appKey, config.permissionsKey, this.debug);
+    // Initialize decoder with optional custom permissions key, debug flag, and payload size limit
+    this.decoder = new SessionDecoder(config.appKey, config.permissionsKey, this.debug, config.maxPayloadSize);
 
     // Initialize store based on driver
     if (config.session.driver === 'database') {

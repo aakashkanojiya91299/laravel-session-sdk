@@ -60,6 +60,15 @@ export interface LaravelSessionConfig {
    * Supports dot notation: 'user.permissions', 'auth.permissions'
    */
   permissionsKey?: string | string[];
+
+  /**
+   * Maximum allowed session payload size in bytes (after base64 decoding).
+   * Payloads exceeding this limit will be rejected to prevent event loop blocking
+   * and excessive memory usage from bloated sessions.
+   *
+   * @default 1048576 (1 MB)
+   */
+  maxPayloadSize?: number;
 }
 
 export interface SessionData {

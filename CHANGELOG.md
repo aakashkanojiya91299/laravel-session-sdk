@@ -2,13 +2,15 @@
 
 All notable changes to the Laravel Session SDK will be documented in this file.
 
-## [1.4.8] - 2026-02-19
+## [1.4.9] - 2026-02-19
 
 ### Fixed
-- **Fixed PHP unserialization crash on large sessions (~200KB+)**: Changed base64 decoding from `utf-8` to `latin1` encoding in `SessionDecoder.decode()`. PHP's serialize format is byte-oriented (`s:N:"..."` counts bytes, not characters), so multi-byte characters (accented names, Unicode, emoji) in session data caused byte offsets to shift, resulting in `"Expected '"' at index X while unserializing payload"` errors.
+- **Fixed PHP unserialization crash on large sessions (~200KB+)**: `SessionDecoder.decode()` now passes the raw `Buffer` directly to `PhpSerializer.unserialize()` instead of converting to a string first. The `php-serialize` library internally does `Buffer.from(item)` — when `item` is a string this re-encodes as UTF-8, expanding bytes 0x80-0xFF to multi-byte sequences and corrupting the byte offsets that PHP's serialize format relies on (`s:N:"..."` counts bytes, not characters). Passing a raw Buffer preserves exact bytes with zero encoding conversion, fixing `"Expected '"' at index X while unserializing payload"` errors.
+- `PhpSerializer.unserialize()` now accepts `string | Buffer` for encoding-safe deserialization
 
 ### Added
 - **Dynamic class mapping for unknown PHP classes**: Added a `Proxy`-based catch-all in `PhpSerializer` that automatically handles unknown PHP classes (e.g., `App\Models\Competition`, `Spatie\Permission\Models\Role`) by deserializing them as plain objects instead of throwing `"Class not found in given scope"` errors. Unknown classes are accessible as regular objects with a `__php_classname` property preserving the original PHP class name.
+- **Configurable max payload size guard**: New `maxPayloadSize` config option (default: 1MB) rejects oversized session payloads before parsing, preventing event loop blocking and memory spikes from bloated sessions. Provides a clear error message with the size and limit.
 
 ### Improved
 - Sessions containing custom Eloquent models, Spatie permission objects, or any other application-specific PHP classes now deserialize without requiring manual `addClassMapping()` calls

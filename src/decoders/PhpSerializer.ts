@@ -99,11 +99,13 @@ export class PhpSerializer {
   /**
    * Unserialize PHP data to JavaScript object
    */
-  static unserialize(data: string): any {
+  static unserialize(data: string | Buffer): any {
     try {
       // Use Proxy-based classMap so unknown PHP classes (e.g. App\Models\Competition,
-      // Spatie\Permission\Models\Role) deserialize as plain objects instead of throwing
-      return phpSerialize.unserialize(data, classMapProxy);
+      // Spatie\Permission\Models\Role) deserialize as plain objects instead of throwing.
+      // Accepts Buffer to avoid encoding corruption — php-serialize internally does
+      // Buffer.from(item), which copies a Buffer's exact bytes but re-encodes strings as UTF-8.
+      return phpSerialize.unserialize(data as string, classMapProxy);
     } catch (error: any) {
       throw new Error(`PHP unserialization failed: ${error.message}`);
     }

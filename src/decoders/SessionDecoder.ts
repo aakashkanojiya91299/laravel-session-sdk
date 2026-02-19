@@ -3,12 +3,16 @@ import { SessionData } from '../types';
 import * as crypto from 'crypto';
 import { sanitizeError, shouldSanitize } from '../utils/SecurityUtils';
 
+// Default max payload size: 1 MB
+const DEFAULT_MAX_PAYLOAD_SIZE = 1 * 1024 * 1024;
+
 export class SessionDecoder {
   private appKey?: Buffer;
   private permissionsKey?: string | string[];
   private debug: boolean;
+  private maxPayloadSize: number;
 
-  constructor(appKey?: string, permissionsKey?: string | string[], debug: boolean = false) {
+  constructor(appKey?: string, permissionsKey?: string | string[], debug: boolean = false, maxPayloadSize?: number) {
     if (appKey) {
       // Remove 'base64:' prefix if present
       const key = appKey.replace(/^base64:/, '');
@@ -16,6 +20,7 @@ export class SessionDecoder {
     }
     this.permissionsKey = permissionsKey;
     this.debug = debug;
+    this.maxPayloadSize = maxPayloadSize ?? DEFAULT_MAX_PAYLOAD_SIZE;
   }
 
   private log(...args: any[]): void {
@@ -38,13 +43,24 @@ export class SessionDecoder {
       this.log('🔓 Decoding session payload...');
       this.log('📦 Payload length:', payload.length);
       
-      // Step 1: Base64 decode using latin1 (binary) encoding.
-      // PHP serialize format is byte-oriented — string lengths (s:N:"...") count bytes, not characters.
-      // Using 'utf-8' here would shift byte offsets when the payload contains multi-byte characters
-      // (accented names, Unicode, emoji, etc.), causing "Expected '"' at index X" parse errors.
-      // latin1 preserves the 1:1 byte-to-character mapping that php-serialize requires.
-      const decoded = Buffer.from(payload, 'base64').toString('latin1');
+      // Step 1: Base64 decode to raw Buffer (do NOT convert to string).
+      // PHP serialize format is byte-oriented — string lengths (s:N:"...") count bytes.
+      // Converting to string first (utf-8 or latin1) then letting php-serialize do
+      // Buffer.from(string) internally causes byte offset corruption on multi-byte data,
+      // resulting in "Expected '"' at index X" parse errors.
+      // Passing the raw Buffer preserves exact bytes with zero encoding conversion.
+      const decoded = Buffer.from(payload, 'base64');
       this.log('✅ Base64 decoded, length:', decoded.length);
+
+      // Guard: reject oversized payloads to prevent event loop blocking and memory spikes
+      if (decoded.length > this.maxPayloadSize) {
+        const sizeMB = (decoded.length / (1024 * 1024)).toFixed(2);
+        const limitMB = (this.maxPayloadSize / (1024 * 1024)).toFixed(2);
+        throw new Error(
+          `Session payload too large: ${sizeMB}MB exceeds ${limitMB}MB limit. ` +
+          `Configure maxPayloadSize to increase the limit, or reduce session data in Laravel.`
+        );
+      }
 
       // Step 2: Unserialize PHP format (stdClass support is built-in)
       const unserialized = PhpSerializer.unserialize(decoded);
